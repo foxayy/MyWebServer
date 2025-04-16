@@ -13,6 +13,7 @@
 #include <cassert>
 #include <sys/epoll.h>
 #include <string>
+#include <cstring>
 
 
 const int MAX_FD = 65536;           //max file description
@@ -26,19 +27,18 @@ public:
     WebServer();
     ~WebServer();
 
-    void init(int port , string user, string passWord, string databaseName,
-              int log_write , int opt_linger, int trigmode, int sql_num,
-              int thread_num, int close_log, int actor_model);
+    void init(int port);
 
-    void eventLoop();
+    void event_listen();
+    void event_loop();
 
 
 public:
-    //基础
+    //basic information
     int m_port;
     char *m_root;
 
-    int m_pipefd[2];
+    //int m_pipefd[2];
     int m_epollfd;
 
     //epoll_event unit
