@@ -32,6 +32,8 @@ public:
     void event_listen();
     void event_loop();
 
+private:
+    bool dealClientData();
 
 public:
     //basic information
@@ -39,12 +41,12 @@ public:
     char *m_root;
 
     //int m_pipefd[2];
-    int m_epollfd;
+    int m_epoll_fd;
 
     //epoll_event unit
     epoll_event events[MAX_EVENT_NUMBER];
 
-    int m_listenfd;
+    int m_listen_fd;
 
 };
 

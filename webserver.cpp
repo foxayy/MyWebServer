@@ -1,5 +1,9 @@
 #include "webserver.h"
 
+/********************************************/
+/************ inner functions ***************/
+/********************************************/
+
 WebServer::WebServer()
 {
 
@@ -8,10 +12,29 @@ WebServer::WebServer()
 
 WebServer::~WebServer()
 {
-    close(m_epollfd);
-    close(m_listenfd);
+    close(m_epoll_fd);
+    close(m_listen_fd);
 }
 
+bool WebServer::dealClientData()
+{
+    struct sockaddr_in client_addr;
+    socklen_t client_addr_len = sizeof(client_addr);
+
+    int connfd = accept(m_listen_fd, (struct sockaddr *)&client_addr, &client_addr_len);
+    if (connfd < 0)
+    {
+        printf("%s:errno is:%d", "accept error", errno);
+        return false;
+    }
+
+    return true;
+}
+
+
+/********************************************/
+/************ outter functions **************/
+/********************************************/
 
 void WebServer::init(int port)
 {
@@ -23,8 +46,8 @@ void WebServer::init(int port)
 void WebServer::event_listen()
 {
     // create socket
-    m_listenfd = socket(PF_INET, SOCK_STREAM, 0);
-    assert(m_listenfd >= 0);
+    m_listen_fd = socket(PF_INET, SOCK_STREAM, 0);
+    assert(m_listen_fd >= 0);
 
     int ret = 0;
     struct sockaddr_in address;
@@ -34,19 +57,43 @@ void WebServer::event_listen()
     address.sin_port = htons(m_port);
 
     int flag = 1;
-    setsockopt(m_listenfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
-    ret = bind(m_listenfd, (struct sockaddr *)&address, sizeof(address));
+    setsockopt(m_listen_fd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
+    ret = bind(m_listen_fd, (struct sockaddr *)&address, sizeof(address));
     assert(ret >= 0);
-    ret = listen(m_listenfd, 5);
+    ret = listen(m_listen_fd, 5);
     assert(ret >= 0);
 
     // epoll create kernel event table
-    epoll_event events[MAX_EVENT_NUMBER];
-    m_epollfd = epoll_create(5);
-    assert(m_epollfd != -1);
+    m_epoll_fd = epoll_create(1);
+    assert(m_epoll_fd != -1);
 }
 
 void WebServer::event_loop()
 {
+    bool stop_server = false;
+    while(!stop_server) {
+        int number = epoll_wait(m_epoll_fd, events, MAX_EVENT_NUMBER, -1);
 
+        if(number < 0 && errno != EINTR) {
+            printf("epoll failure\n");
+            break;
+        }
+
+        for(int i = 0; i < number; i++) {
+            int sockfd = events[i].data.fd;
+            if (sockfd == m_listen_fd) {
+                // handle new connection
+                bool ret = 
+            } else if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
+                // handle error event
+
+            } else if (events[i].events & EPOLLIN) {
+                // handle read event
+
+            } else if (events[i].events & EPOLLOUT) {
+                // handle write event
+
+            }
+        }
+    }
 }
