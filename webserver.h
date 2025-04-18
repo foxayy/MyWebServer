@@ -34,6 +34,9 @@ public:
     void event_loop();
 
 private:
+    void dealWithRead(int sockfd);
+    void dealWithWrite(int sockfd);
+    void addClient(int connfd, struct sockaddr_in client_addr);
     bool dealClientData();
 
 public:
@@ -49,6 +52,7 @@ public:
 
     int m_listen_fd;
 
+    client_data *client;
     Utils utils;
 };
 

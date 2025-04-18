@@ -23,6 +23,13 @@
 
 #include <time.h>
 
+
+struct client_data
+{
+    sockaddr_in address;
+    int sockfd;
+};
+
 class Utils
 {
 public:
@@ -39,6 +46,7 @@ public:
 
 
 public:
+    static int u_epoll_fd;
     int m_TIMESLOT;
 };
 

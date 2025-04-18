@@ -6,7 +6,7 @@
 
 WebServer::WebServer()
 {
-
+    client = new client_data[MAX_FD];
 }
 
 
@@ -14,6 +14,12 @@ WebServer::~WebServer()
 {
     close(m_epoll_fd);
     close(m_listen_fd);
+}
+
+void WebServer::addClient(int connfd, struct sockaddr_in client_addr)
+{
+    client[connfd].sockfd = connfd;
+    client[connfd].address = client_addr;
 }
 
 bool WebServer::dealClientData()
@@ -28,9 +34,59 @@ bool WebServer::dealClientData()
         return false;
     }
 
+    addClient(connfd, client_addr);
+
     return true;
 }
 
+void WebServer::dealWithRead(int sockfd)
+{
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(client[sockfd].address.sin_addr), 
+              client_ip, INET_ADDRSTRLEN);
+
+    char buffer[1024];
+    ssize_t bytes_read = read(sockfd, buffer, sizeof(buffer)-1);
+
+    if (bytes_read <= 0) {
+        if (bytes_read == 0) {
+            printf("Client %s:%d disconnected\n", 
+                  client_ip, ntohs(client[sockfd].address.sin_port));
+        } else {
+            perror("read error");
+        }
+        close(sockfd);
+        return;
+    }
+
+    buffer[bytes_read] = '\0';
+    printf("Received from %s:%d:\n%s\n", 
+          client_ip, ntohs(client[sockfd].address.sin_port), 
+          buffer);
+
+
+    epoll_event ev;
+    ev.data.fd = sockfd;
+    ev.events = EPOLLOUT | EPOLLONESHOT;
+
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, sockfd, &ev) == -1) {
+        perror("epoll_ctl modify failed");
+        close(sockfd); // 修改失败则关闭连接
+    }
+}
+
+void WebServer::dealWithWrite(int sockfd)
+{
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(client[sockfd].address.sin_addr), 
+              client_ip, INET_ADDRSTRLEN);
+
+    printf("Response sent to %s:%d\n", 
+          client_ip, ntohs(client[sockfd].address.sin_port));
+
+    const char* msg = "Hello World";
+    ssize_t bytes_sent = write(sockfd, msg, strlen(msg));
+}
 
 /********************************************/
 /************ outter functions **************/
@@ -66,6 +122,11 @@ void WebServer::event_listen()
     // epoll create kernel event table
     m_epoll_fd = epoll_create(1);
     assert(m_epoll_fd != -1);
+
+    utils.add_fd(m_epoll_fd, m_listen_fd, false, 0);
+    http_conn::h_epoll_fd = m_epoll_fd;
+
+    Utils::u_epoll_fd = m_epoll_fd;
 }
 
 void WebServer::event_loop()
@@ -83,16 +144,19 @@ void WebServer::event_loop()
             int sockfd = events[i].data.fd;
             if (sockfd == m_listen_fd) {
                 // handle new connection
-                bool ret = 
+                bool ret = dealClientData();
+                if(false == ret) {
+                    continue;
+                }
             } else if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
                 // handle error event
 
             } else if (events[i].events & EPOLLIN) {
                 // handle read event
-
+                dealWithRead(sockfd);
             } else if (events[i].events & EPOLLOUT) {
                 // handle write event
-
+                dealWithWrite(sockfd);
             }
         }
     }

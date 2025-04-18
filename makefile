@@ -9,10 +9,7 @@ else
     CXXFLAGS += -O2
 endif
 
-#server: main.cpp  ./timer/lst_timer.cpp ./http/http_conn.cpp ./log/log.cpp ./CGImysql/sql_connection_pool.cpp  webserver.cpp config.cpp
-#	$(CXX) -o server  $^ $(CXXFLAGS) -lpthread -lmysqlclient
-
-server: main.o config.o
+server: main.o config.o ./timer/timer.o ./http/http_conn.o
 	$(CXX) -o server $^ $(CXXFLAGS) -lpthread -lmysqlclient
 
 clean:
