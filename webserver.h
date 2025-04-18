@@ -1,7 +1,6 @@
 #ifndef WEBSERVER_H
 #define WEBSERVER_H
 
-
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -14,6 +13,8 @@
 #include <sys/epoll.h>
 #include <string>
 #include <cstring>
+
+#include "./http/http_conn.h"
 
 
 const int MAX_FD = 65536;           //max file description
@@ -48,6 +49,7 @@ public:
 
     int m_listen_fd;
 
+    Utils utils;
 };
 
 #endif
