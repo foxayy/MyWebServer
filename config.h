@@ -1,9 +1,10 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "webserver.h"
 #include <unistd.h>
 #include <cstdlib>
+
+#include "webserver.h"
 
 class Config {
 public:

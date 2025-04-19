@@ -71,7 +71,7 @@ void WebServer::dealWithRead(int sockfd)
 
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, sockfd, &ev) == -1) {
         perror("epoll_ctl modify failed");
-        close(sockfd); // 修改失败则关闭连接
+        close(sockfd);
     }
 }
 

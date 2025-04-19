@@ -14,4 +14,4 @@ server: main.o config.o ./timer/timer.o ./http/http_conn.o
 
 clean:
 	rm -f server
-	rm -f *.o
+	rm -f *.o ./timer/*.o ./http/*.o
