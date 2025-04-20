@@ -15,6 +15,7 @@
 #include <cstring>
 
 #include "./http/http_conn.h"
+#include "./timer/timer.h"
 
 
 const int MAX_FD = 65536;           //max file description

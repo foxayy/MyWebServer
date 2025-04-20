@@ -20,6 +20,27 @@ void WebServer::addClient(int connfd, struct sockaddr_in client_addr)
 {
     client[connfd].sockfd = connfd;
     client[connfd].address = client_addr;
+
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(client[connfd].address.sin_addr), 
+              client_ip, INET_ADDRSTRLEN);
+
+    printf("client %s:%d connected\n", client_ip,
+          ntohs(client[connfd].address.sin_port));
+    
+    // set non-blocking
+    int flags = fcntl(connfd, F_GETFL, 0);
+    fcntl(connfd, F_SETFL, flags | O_NONBLOCK);
+    
+    // set event ET
+    epoll_event ev;
+    ev.data.fd = connfd;
+    ev.events = EPOLLIN | EPOLLET;
+    
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, connfd, &ev) == -1) {
+        perror("epoll_ctl add failed");
+        close(connfd);
+    }
 }
 
 bool WebServer::dealClientData()
@@ -35,6 +56,7 @@ bool WebServer::dealClientData()
     }
 
     addClient(connfd, client_addr);
+    utils.add_fd(m_epoll_fd, connfd, false, 0);
 
     return true;
 }
@@ -64,10 +86,9 @@ void WebServer::dealWithRead(int sockfd)
           client_ip, ntohs(client[sockfd].address.sin_port), 
           buffer);
 
-
     epoll_event ev;
     ev.data.fd = sockfd;
-    ev.events = EPOLLOUT | EPOLLONESHOT;
+    ev.events = EPOLLOUT | EPOLLET;
 
     if (epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, sockfd, &ev) == -1) {
         perror("epoll_ctl modify failed");
@@ -86,6 +107,15 @@ void WebServer::dealWithWrite(int sockfd)
 
     const char* msg = "Hello World";
     ssize_t bytes_sent = write(sockfd, msg, strlen(msg));
+
+    epoll_event ev;
+    ev.data.fd = sockfd;
+    ev.events = EPOLLIN | EPOLLET;
+
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, sockfd, &ev) == -1) {
+        perror("epoll_ctl modify failed");
+        close(sockfd);
+    }
 }
 
 /********************************************/

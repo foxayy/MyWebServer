@@ -9,7 +9,7 @@ else
     CXXFLAGS += -O2
 endif
 
-server: main.o config.o ./timer/timer.o ./http/http_conn.o
+server: main.o config.o webserver.o ./timer/timer.o ./http/http_conn.o
 	$(CXX) -o server $^ $(CXXFLAGS) -lpthread -lmysqlclient
 
 clean:

@@ -1,5 +1,7 @@
 #include "timer.h"
 
+int Utils::u_epoll_fd = 0;
+
 void Utils::init(int timeslot)
 {
     m_TIMESLOT = timeslot;
