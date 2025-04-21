@@ -6,8 +6,7 @@
 #include <exception>
 #include <pthread.h>
 
-#include "./locker/locker.h"
-
+#include "locker.h"
 
 template<typename T>
 class threadpool
@@ -29,10 +28,10 @@ private:
     pthread_t *m_threads;       // the array of threads, size is m_thread_number
     std::list<T *> m_workqueue; // request queue
     locker m_queuelocker;       // mutex lock for request queue
-}
+};
 
 template <typename T>
-threadpool<T>::threadpool( int actor_model, connection_pool *connPool, int thread_number, int max_requests) : m_actor_model(actor_model),m_thread_number(thread_number), m_max_requests(max_requests), m_threads(NULL)
+threadpool<T>::threadpool( int actor_model, int thread_number, int max_requests) : m_actor_model(actor_model),m_thread_number(thread_number), m_max_requests(max_requests), m_threads(NULL)
 {
     if (thread_number <= 0 || max_requests <= 0)
         throw std::exception();

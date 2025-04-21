@@ -4,8 +4,6 @@
 #include <unistd.h>
 #include <cstdlib>
 
-#include "webserver.h"
-
 class Config {
 public:
         Config();

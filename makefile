@@ -9,9 +9,12 @@ else
     CXXFLAGS += -O2
 endif
 
-server: main.o config.o webserver.o ./timer/timer.o ./http/http_conn.o
+COMMON_OBJS = ./common/config.o ./common/timer/timer.o ./common/http/http_conn.o
+SRC_OBJS = ./src/main.o ./src/webserver.o
+
+server: $(SRC_OBJS) $(COMMON_OBJS)
 	$(CXX) -o server $^ $(CXXFLAGS) -lpthread -lmysqlclient
 
 clean:
 	rm -f server
-	rm -f *.o ./timer/*.o ./http/*.o
+	rm -f *.o $(SRC_OBJS) $(COMMON_OBJS)
