@@ -6,6 +6,7 @@
 
 WebServer::WebServer()
 {
+    users = new http_conn[MAX_FD];
     client = new client_data[MAX_FD];
 }
 
@@ -14,6 +15,9 @@ WebServer::~WebServer()
 {
     close(m_epoll_fd);
     close(m_listen_fd);
+
+    delete[] users;
+    delete[] client;
 }
 
 void WebServer::addClient(int connfd, struct sockaddr_in client_addr)

@@ -53,6 +53,7 @@ public:
 
     int m_listen_fd;
 
+    http_conn *users;
     client_data *client;
     Utils utils;
 };
