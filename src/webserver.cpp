@@ -58,6 +58,12 @@ bool WebServer::dealClientData()
         printf("%s:errno is:%d", "accept error", errno);
         return false;
     }
+    if (http_conn::m_user_count >= MAX_FD)
+    {
+        utils.show_error(connfd, "Internal server busy");
+        printf("%s", "Internal server busy");
+        return false;
+    }
 
     addClient(connfd, client_addr);
     utils.add_fd(m_epoll_fd, connfd, false, 0);

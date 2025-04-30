@@ -33,3 +33,10 @@ void Utils::add_fd(int epollfd, int fd, bool one_shot, int TRIGMode)
     epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
     setNonBlocking(fd);
 }
+
+
+void Utils::show_error(int connfd, const char *info)
+{
+    send(connfd, info, strlen(info), 0);
+    close(connfd);
+}
