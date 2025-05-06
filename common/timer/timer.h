@@ -43,7 +43,7 @@ public:
 
     //将内核事件表注册读事件，ET模式，选择开启EPOLLONESHOT
     void add_fd(int epollfd, int fd, bool one_shot, int TRIGMode);
-
+    void show_error(int connfd, const char *info);
 
 public:
     static int u_epoll_fd;

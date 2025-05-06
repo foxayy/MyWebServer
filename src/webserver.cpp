@@ -22,6 +22,7 @@ WebServer::~WebServer()
 
 void WebServer::addClient(int connfd, struct sockaddr_in client_addr)
 {
+    users[connfd].init(connfd, client_addr);
     client[connfd].sockfd = connfd;
     client[connfd].address = client_addr;
 
@@ -31,20 +32,6 @@ void WebServer::addClient(int connfd, struct sockaddr_in client_addr)
 
     printf("client %s:%d connected\n", client_ip,
           ntohs(client[connfd].address.sin_port));
-    
-    // set non-blocking
-    int flags = fcntl(connfd, F_GETFL, 0);
-    fcntl(connfd, F_SETFL, flags | O_NONBLOCK);
-    
-    // set event ET
-    epoll_event ev;
-    ev.data.fd = connfd;
-    ev.events = EPOLLIN | EPOLLET;
-    
-    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, connfd, &ev) == -1) {
-        perror("epoll_ctl add failed");
-        close(connfd);
-    }
 }
 
 bool WebServer::dealClientData()
@@ -66,7 +53,7 @@ bool WebServer::dealClientData()
     }
 
     addClient(connfd, client_addr);
-    utils.add_fd(m_epoll_fd, connfd, false, 0);
+    utils.add_fd(m_epoll_fd, connfd, true, 0);
 
     return true;
 }
