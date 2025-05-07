@@ -88,7 +88,7 @@ public:
 
 
 private:
-    void init();
+    void Init();
     HTTP_CODE process_read();
     bool process_write(HTTP_CODE ret);
     HTTP_CODE parse_request_line(char *text);
