@@ -21,6 +21,7 @@
 #include <sys/wait.h>
 #include <sys/uio.h>
 #include <map>
+#include <string>
 
 #include "../timer/timer.h"
 #include "../locker.h"
@@ -140,7 +141,7 @@ private:
     int bytes_have_send;
     char *doc_root;
 
-    map<string, string> m_users;
+    std::map<std::string, std::string> m_users;
     int m_TRIGMode;
     int m_close_log;
 

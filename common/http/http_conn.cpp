@@ -76,3 +76,4 @@ void http_conn::Init()
     memset(m_write_buf, '\0', WRITE_BUFFER_SIZE);
     memset(m_real_file, '\0', FILENAME_LEN);
 }
+
