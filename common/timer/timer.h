@@ -95,6 +95,6 @@ public:
     int m_TIMESLOT;
 };
 
-void cb_func(client_data *user_data);
+void cb_client_disconn(client_data *user_data);
 
 #endif

@@ -28,6 +28,7 @@ private:
     pthread_t *m_threads;       // the array of threads, size is m_thread_number
     std::list<T *> m_workqueue; // request queue
     locker m_queuelocker;       // mutex lock for request queue
+    sem m_queuestat;            // task need process
 };
 
 template <typename T>
@@ -71,7 +72,7 @@ bool threadpool<T>::append(T *request, int state)
     request->m_state = state;
     m_workqueue.push_back(request);
     m_queuelocker.unlock();
-    //m_queuestat.post();
+    m_queuestat.post();
     return true;
 }
 
@@ -107,7 +108,7 @@ void threadpool<T>::run()
                 if (request->read_once())
                 {
                     request->improv = 1;
-                    connectionRAII mysqlcon(&request->mysql, m_connPool);
+                    //connectionRAII mysqlcon(&request->mysql, m_connPool);
                     request->process();
                 }
                 else
@@ -131,8 +132,8 @@ void threadpool<T>::run()
         }
         else
         {
-            connectionRAII mysqlcon(&request->mysql, m_connPool);
-            request->process();
+            //connectionRAII mysqlcon(&request->mysql, m_connPool);
+            //request->process();
         }
     }
 }

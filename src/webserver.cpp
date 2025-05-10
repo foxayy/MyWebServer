@@ -23,9 +23,18 @@ WebServer::~WebServer()
 void WebServer::addClient(int connfd, struct sockaddr_in client_addr)
 {
     users[connfd].init(connfd, client_addr);
+
     client[connfd].sockfd = connfd;
     client[connfd].address = client_addr;
+    util_timer *timer = new util_timer;
+    timer->user_data = &client[connfd];
+    timer->cb_func = cb_client_disconn;
+    time_t cur = time(NULL);
+    timer->expire = cur + 3 * TIMESLOT;
+    client[connfd].timer = timer;
+    utils.m_timer_lst.add_timer(timer);
 
+    // show client info
     char client_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(client[connfd].address.sin_addr), 
               client_ip, INET_ADDRSTRLEN);
@@ -53,43 +62,67 @@ bool WebServer::dealClientData()
     }
 
     addClient(connfd, client_addr);
-    utils.add_fd(m_epoll_fd, connfd, true, 0);
+    //utils.add_fd(m_epoll_fd, connfd, true, 0);
 
+    return true;
+}
+
+bool WebServer::dealWithSignal(bool &timeout, bool &stop_server)
+{
+    int ret = 0;
+    int sig;
+    char signals[1024];
+    ret = recv(m_pipe_fd[0], signals, sizeof(signals), 0);
+    if (ret == -1)
+    {
+        return false;
+    }
+    else if (ret == 0)
+    {
+        return false;
+    }
+    else
+    {
+        for (int i = 0; i < ret; ++i)
+        {
+            switch (signals[i])
+            {
+            case SIGALRM:
+            {
+                timeout = true;
+                break;
+            }
+            case SIGTERM:
+            {
+                stop_server = true;
+                break;
+            }
+            }
+        }
+    }
     return true;
 }
 
 void WebServer::dealWithRead(int sockfd)
 {
-    char client_ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(client[sockfd].address.sin_addr), 
-              client_ip, INET_ADDRSTRLEN);
-
-    char buffer[1024];
-    ssize_t bytes_read = read(sockfd, buffer, sizeof(buffer)-1);
-
-    if (bytes_read <= 0) {
-        if (bytes_read == 0) {
-            printf("Client %s:%d disconnected\n", 
-                  client_ip, ntohs(client[sockfd].address.sin_port));
-        } else {
-            perror("read error");
-        }
-        close(sockfd);
-        return;
+    util_timer *timer = client[sockfd].timer;
+    if (timer) {
+        adjustTimer(timer);
     }
 
-    buffer[bytes_read] = '\0';
-    printf("Received from %s:%d:\n%s\n", 
-          client_ip, ntohs(client[sockfd].address.sin_port), 
-          buffer);
+    // when receive read event, put the event into request queue
+    m_pool->append(&users[sockfd], 0);
 
-    epoll_event ev;
-    ev.data.fd = sockfd;
-    ev.events = EPOLLOUT | EPOLLET;
-
-    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, sockfd, &ev) == -1) {
-        perror("epoll_ctl modify failed");
-        close(sockfd);
+    while (true) {
+        // improv 
+        if (1 == users[sockfd].improv) {
+            if (1 == users[sockfd].timer_flag) {
+                dealTimer(timer, sockfd);
+                users[sockfd].timer_flag = 0;
+            }
+            users[sockfd].improv = 0;
+            break;
+        }
     }
 }
 
@@ -115,15 +148,39 @@ void WebServer::dealWithWrite(int sockfd)
     }
 }
 
+void WebServer::dealTimer(util_timer *timer, int sockfd)
+{
+    timer->cb_func(&client[sockfd]);
+    if(timer) {
+        utils.m_timer_lst.del_timer(timer);
+    }
+
+    printf("close fd %d\n", client[sockfd].sockfd);
+}
+
+void WebServer::adjustTimer(util_timer *timer)
+{
+    time_t cur = time(NULL);
+    timer->expire = cur + 3 * TIMESLOT;
+    utils.m_timer_lst.adjust_timer(timer);
+
+    printf("%s\n", "adjust timer once");
+}
 /********************************************/
 /************ outter functions **************/
 /********************************************/
 
-void WebServer::init(int port)
+void WebServer::init(int port, int actor_model)
 {
     // set member variables
     m_port = port;
+    m_actormodel = actor_model;
+}
 
+void WebServer::thread_pool()
+{
+    //thread pool
+    m_pool = new threadpool<http_conn>(m_actormodel, m_thread_num);
 }
 
 void WebServer::event_listen()
@@ -150,14 +207,31 @@ void WebServer::event_listen()
     m_epoll_fd = epoll_create(1);
     assert(m_epoll_fd != -1);
 
+    utils.init(TIMESLOT);
+
     utils.add_fd(m_epoll_fd, m_listen_fd, false, 0);
     http_conn::h_epoll_fd = m_epoll_fd;
 
+    ret = socketpair(PF_UNIX, SOCK_STREAM, 0, m_pipe_fd);
+    assert(ret != -1);
+    utils.setNonBlocking(m_pipe_fd[1]);
+    utils.add_fd(m_epoll_fd, m_pipe_fd[0], false, 0);
+
+    utils.add_sig(SIGPIPE, SIG_IGN);
+    utils.add_sig(SIGALRM, utils.sig_handler, false);
+    utils.add_sig(SIGTERM, utils.sig_handler, false);
+
+    alarm(TIMESLOT);
+
+    //工具类,信号和描述符基础操作
+    Utils::u_pipe_fd = m_pipe_fd;
     Utils::u_epoll_fd = m_epoll_fd;
+
 }
 
 void WebServer::event_loop()
 {
+    bool timeout = false;
     bool stop_server = false;
     while(!stop_server) {
         int number = epoll_wait(m_epoll_fd, events, MAX_EVENT_NUMBER, -1);
@@ -172,11 +246,18 @@ void WebServer::event_loop()
             if (sockfd == m_listen_fd) {
                 // handle new connection
                 bool ret = dealClientData();
-                if(false == ret) {
+                if(false == ret)
                     continue;
-                }
+
             } else if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
                 // handle error event
+                util_timer *timer = client[sockfd].timer;
+                dealTimer(timer, sockfd);
+            
+            } else if ((sockfd == m_pipe_fd[0]) && (events[i].events & EPOLLIN)) {
+                bool flag = dealWithSignal(timeout, stop_server);
+                if (false == flag)
+                    printf("%s\n", "dealclientdata failure");
 
             } else if (events[i].events & EPOLLIN) {
                 // handle read event

@@ -13,7 +13,8 @@ int main(int argc, char *argv[]) {
 
     printf("port:%d\n", config.PORT);
 
-    server.init(config.PORT);
+    server.init(config.PORT, config.actor_model);
+    server.thread_pool();
     server.event_listen();
     server.event_loop();
 

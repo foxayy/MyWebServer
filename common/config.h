@@ -12,6 +12,8 @@ public:
         void parse_arg(int argc, char *argv[]);
 
         int PORT;
+        
+        int actor_model;
 };
 
 #endif

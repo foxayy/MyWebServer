@@ -36,7 +36,7 @@ void sort_timer_lst::add_timer(util_timer *timer)
         head = timer;
         return;
     }
-    add_timer(timer, head);
+    addTimer(timer, head);
 }
 
 void sort_timer_lst::adjust_timer(util_timer *timer)
@@ -55,13 +55,13 @@ void sort_timer_lst::adjust_timer(util_timer *timer)
         head = head->next;
         head->prev = NULL;
         timer->next = NULL;
-        add_timer(timer, head);
+        addTimer(timer, head);
     }
     else
     {
         timer->prev->next = timer->next;
         timer->next->prev = timer->prev;
-        add_timer(timer, timer->next);
+        addTimer(timer, timer->next);
     }
 }
 
@@ -220,7 +220,7 @@ int *Utils::u_pipe_fd = 0;
 int Utils::u_epoll_fd = 0;
 
 class Utils;
-void cb_func(client_data *user_data)
+void cb_client_disconn(client_data *user_data)
 {
     epoll_ctl(Utils::u_epoll_fd, EPOLL_CTL_DEL, user_data->sockfd, 0);
     assert(user_data);
