@@ -15,7 +15,7 @@ const char *error_500_title = "Internal Error";
 const char *error_500_form = "There was an unusual problem serving the request file.\n";
 
 //对文件描述符设置非阻塞
-int setnonblocking(int fd)
+int setNonBlocking(int fd)
 {
     int old_option = fcntl(fd, F_GETFL);
     int new_option = old_option | O_NONBLOCK;
@@ -24,7 +24,7 @@ int setnonblocking(int fd)
 }
 
 //将内核事件表注册读事件，ET模式，选择开启EPOLLONESHOT
-void addfd(int epollfd, int fd, bool one_shot, int TRIGMode)
+void addFd(int epollfd, int fd, bool one_shot, int TRIGMode)
 {
     epoll_event event;
     event.data.fd = fd;
@@ -37,19 +37,7 @@ void addfd(int epollfd, int fd, bool one_shot, int TRIGMode)
     if (one_shot)
         event.events |= EPOLLONESHOT;
     epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
-    setnonblocking(fd);
-}
-
-void http_conn::init(int sockfd, const sockaddr_in &addr)
-{
-    m_sockfd = sockfd;
-    m_address = addr;
-
-    m_TRIGMode = 0;
-
-    addfd(h_epoll_fd, sockfd, true, m_TRIGMode);
-    m_user_count++;
-
+    setNonBlocking(fd);
 }
 
 void http_conn::Init()
@@ -77,3 +65,31 @@ void http_conn::Init()
     memset(m_real_file, '\0', FILENAME_LEN);
 }
 
+void http_conn::init(int sockfd, const sockaddr_in &addr)
+{
+    m_sockfd = sockfd;
+    m_address = addr;
+
+    m_TRIGMode = 0;
+
+    addFd(h_epoll_fd, sockfd, true, m_TRIGMode);
+    m_user_count++;
+}
+
+void http_conn::close_conn(bool real_close = true)
+{
+
+}
+
+void http_conn::process()
+{
+
+}
+bool http_conn::read_once()
+{
+
+}
+bool http_conn::write()
+{
+    
+}

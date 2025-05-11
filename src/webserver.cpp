@@ -114,8 +114,9 @@ void WebServer::dealWithRead(int sockfd)
     m_pool->append(&users[sockfd], 0);
 
     while (true) {
-        // improv 
+        // 'improv' flag indicates that the current request has already been processed
         if (1 == users[sockfd].improv) {
+            // 'timer_flag' indicates that request need to be processed by timer(error\close.etc)
             if (1 == users[sockfd].timer_flag) {
                 dealTimer(timer, sockfd);
                 users[sockfd].timer_flag = 0;
@@ -128,23 +129,25 @@ void WebServer::dealWithRead(int sockfd)
 
 void WebServer::dealWithWrite(int sockfd)
 {
-    char client_ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(client[sockfd].address.sin_addr), 
-              client_ip, INET_ADDRSTRLEN);
+    util_timer *timer = client[sockfd].timer;
+    if (timer) {
+        adjustTimer(timer);
+    }
 
-    printf("Response sent to %s:%d\n", 
-          client_ip, ntohs(client[sockfd].address.sin_port));
+    // when receive read event, put the event into request queue
+    m_pool->append(&users[sockfd], 1);
 
-    const char* msg = "Hello World";
-    ssize_t bytes_sent = write(sockfd, msg, strlen(msg));
-
-    epoll_event ev;
-    ev.data.fd = sockfd;
-    ev.events = EPOLLIN | EPOLLET;
-
-    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_MOD, sockfd, &ev) == -1) {
-        perror("epoll_ctl modify failed");
-        close(sockfd);
+    while (true) {
+        // 'improv' flag indicates that the current request has already been processed
+        if (1 == users[sockfd].improv) {
+            // 'timer_flag' indicates that request need to be processed by timer(error\close.etc)
+            if (1 == users[sockfd].timer_flag) {
+                dealTimer(timer, sockfd);
+                users[sockfd].timer_flag = 0;
+            }
+            users[sockfd].improv = 0;
+            break;
+        }
     }
 }
 
