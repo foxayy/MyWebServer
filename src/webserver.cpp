@@ -169,6 +169,7 @@ void WebServer::adjustTimer(util_timer *timer)
 
     printf("%s\n", "adjust timer once");
 }
+
 /********************************************/
 /************ outter functions **************/
 /********************************************/
